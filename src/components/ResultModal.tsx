@@ -53,9 +53,12 @@ export default function ResultModal({ food, onClose, onAgain }: ResultModalProps
         <h2 className="modal-name" id="result-name">
           {food.name}
         </h2>
-        <span className="modal-tag" style={{ background: TAG_COLORS[food.tag] }}>
-          {food.tag}
-        </span>
+        <div className="modal-meta">
+          <span className="modal-tag" style={{ background: TAG_COLORS[food.tag] }}>
+            {food.tag}
+          </span>
+          <span className="modal-price">大概 ¥{food.price}</span>
+        </div>
         <p className="modal-note">{food.note}</p>
 
         <div className="modal-actions">

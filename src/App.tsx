@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Reel from "./components/Reel";
 import ResultModal from "./components/ResultModal";
-import { FOODS, type Food } from "./data/foods";
+import { applyFilters, DEFAULT_FILTERS, FOODS, type Filters, type Food } from "./data/foods";
 
 const STORAGE_KEY = "daily-bite:v1";
 const HISTORY_LIMIT = 4;
 
+const FILTER_CHIPS: Array<{ key: keyof Filters; icon: string; label: string }> = [
+  { key: "noSpicy", icon: "🌶️", label: "不想吃辣" },
+  { key: "hotOnly", icon: "🍲", label: "想吃热的" },
+  { key: "budget", icon: "💰", label: "20 块以内" },
+];
+
 interface Persisted {
   count: number;
   historyIds: string[];
+  filters: Filters;
 }
 
-function readStore(): { count: number; history: Food[] } {
+function readStore(): { count: number; history: Food[]; filters: Filters } {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { count: 0, history: [] };
+    if (!raw) return { count: 0, history: [], filters: DEFAULT_FILTERS };
 
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     const history = (parsed.historyIds ?? [])
@@ -24,9 +31,10 @@ function readStore(): { count: number; history: Food[] } {
     return {
       count: typeof parsed.count === "number" ? parsed.count : 0,
       history,
+      filters: { ...DEFAULT_FILTERS, ...parsed.filters },
     };
   } catch {
-    return { count: 0, history: [] };
+    return { count: 0, history: [], filters: DEFAULT_FILTERS };
   }
 }
 
@@ -39,21 +47,31 @@ export default function App() {
   const [result, setResult] = useState<Food | null>(null);
   const [history, setHistory] = useState<Food[]>(initial.history);
   const [count, setCount] = useState(initial.count);
+  const [filters, setFilters] = useState<Filters>(initial.filters);
 
   const spinningRef = useRef(false);
   const targetRef = useRef<Food | null>(null);
   const resultRef = useRef<Food | null>(null);
 
-  const spin = useCallback(() => {
-    if (spinningRef.current) return;
+  /** 筛选后的池子：抽签只从这里挑，转盘的滚动画面也用这一份 */
+  const pool = useMemo(() => applyFilters(filters), [filters]);
+  const empty = pool.length === 0;
 
-    const next = FOODS[Math.floor(Math.random() * FOODS.length)];
+  const spin = useCallback(() => {
+    if (spinningRef.current || pool.length === 0) return;
+
+    const next = pool[Math.floor(Math.random() * pool.length)];
 
     spinningRef.current = true;
     targetRef.current = next;
     setSpinning(true);
     setTarget(next);
     setSpinToken((token) => token + 1);
+  }, [pool]);
+
+  const toggleFilter = useCallback((key: keyof Filters) => {
+    if (spinningRef.current) return;
+    setFilters((previous) => ({ ...previous, [key]: !previous[key] }));
   }, []);
 
   const handleSettled = useCallback(() => {
@@ -99,13 +117,13 @@ export default function App() {
 
   /** 只存 id，食物信息以代码为准，避免旧数据结构残留 */
   useEffect(() => {
-    const payload: Persisted = { count, historyIds: history.map((food) => food.id) };
+    const payload: Persisted = { count, historyIds: history.map((food) => food.id), filters };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       /* 无痕模式下写不进去，忽略即可 */
     }
-  }, [count, history]);
+  }, [count, history, filters]);
 
   const petals = useMemo(
     () =>
@@ -155,14 +173,41 @@ export default function App() {
           <span className="machine-label">今日のメニュー</span>
         </div>
 
-        <Reel spinToken={spinToken} target={target} onSettled={handleSettled} />
+        <Reel spinToken={spinToken} target={target} pool={pool} onSettled={handleSettled} />
 
-        <p className="caption">
-          {spinning ? "正在翻找冰箱…" : "准备好了就按下面那颗按钮"}
-        </p>
+        <div className="filters">
+          <span className="filters-label">今 天 的 要 求</span>
+          <div className="chips" role="group" aria-label="筛选条件">
+            {FILTER_CHIPS.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="chip"
+                aria-pressed={filters[chip.key]}
+                disabled={spinning}
+                onClick={() => toggleFilter(chip.key)}
+              >
+                <span aria-hidden="true">{chip.icon}</span>
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <p className="filter-hint">
+            {empty
+              ? "这三个条件同时满足的菜还没被发明出来…"
+              : `符合条件 ${pool.length} 道`}
+          </p>
+        </div>
 
-        <button type="button" className="spin-btn" onClick={spin} disabled={spinning}>
-          {spinning ? "让我想想…" : "吃什么呢？？"}
+        <p className="caption">{spinning ? "正在翻找冰箱…" : "准备好了就按下面那颗按钮"}</p>
+
+        <button
+          type="button"
+          className="spin-btn"
+          onClick={spin}
+          disabled={spinning || empty}
+        >
+          {spinning ? "让我想想…" : empty ? "换个条件吧" : "吃什么呢？？"}
         </button>
 
         <p className="count">
@@ -178,6 +223,7 @@ export default function App() {
               <li key={`${food.id}-${index}`}>
                 <span aria-hidden="true">{food.emoji}</span>
                 {food.name}
+                <em>¥{food.price}</em>
               </li>
             ))}
           </ul>
@@ -189,7 +235,7 @@ export default function App() {
       </footer>
 
       <p className="sr-only" role="status" aria-live="polite">
-        {result ? `今天吃${result.name}` : ""}
+        {result ? `今天吃${result.name}，大概 ${result.price} 元` : ""}
       </p>
 
       <ResultModal food={result} onClose={closeResult} onAgain={spinAgain} />

@@ -304,6 +304,77 @@ body {
   background: linear-gradient(270deg, rgba(243, 251, 255, 0.95), rgba(243, 251, 255, 0));
 }
 
+/* ===== 筛选 ===== */
+.filters {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.filters-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 15px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+.chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #ffd0da;
+}
+
+.chip[aria-pressed="true"] {
+  color: #7a3a4a;
+  font-weight: 600;
+  background: #fff1f4;
+  border-color: #ffb7c5;
+  box-shadow: 0 4px 0 #ffd9e2;
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.chip:focus-visible {
+  outline: 3px solid #7fd6bd;
+  outline-offset: 3px;
+}
+
+.filter-hint {
+  min-height: 18px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
 /* ===== 说明与按钮 ===== */
 .caption {
   min-height: 20px;
@@ -349,7 +420,7 @@ body {
 }
 
 .spin-btn:disabled {
-  cursor: progress;
+  cursor: not-allowed;
   filter: saturate(0.85);
 }
 
@@ -407,6 +478,12 @@ body {
 
 .history li span {
   font-size: 16px;
+}
+
+.history li em {
+  font-style: normal;
+  font-size: 11px;
+  color: #b08a52;
 }
 
 .footer {
@@ -504,13 +581,31 @@ body {
   letter-spacing: 0.02em;
 }
 
+.modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+}
+
 .modal-tag {
   display: inline-block;
-  margin-top: 10px;
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 600;
   color: #6b4a52;
+  border-radius: 999px;
+}
+
+.modal-price {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a6520;
+  background: #fff3d6;
   border-radius: 999px;
 }
 

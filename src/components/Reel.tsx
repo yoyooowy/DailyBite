@@ -12,8 +12,12 @@ function randomFood(): Food {
   return FOODS[Math.floor(Math.random() * FOODS.length)];
 }
 
-function buildStrip(target: Food): Food[] {
-  const strip = Array.from({ length: STRIP_LENGTH }, randomFood);
+function buildStrip(target: Food, pool: Food[]): Food[] {
+  const source = pool.length > 0 ? pool : FOODS;
+  const strip = Array.from(
+    { length: STRIP_LENGTH },
+    () => source[Math.floor(Math.random() * source.length)],
+  );
   strip[RESULT_INDEX] = target;
   return strip;
 }
@@ -22,15 +26,18 @@ interface ReelProps {
   /** 每次 +1 触发一次转动 */
   spinToken: number;
   target: Food | null;
+  /** 当前筛选后的食物池，用来填充滚动过程，保证画面和结果同源 */
+  pool: Food[];
   /** 转停后回调，用来弹结果窗 */
   onSettled: () => void;
 }
 
-export default function Reel({ spinToken, target, onSettled }: ReelProps) {
+export default function Reel({ spinToken, target, pool, onSettled }: ReelProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const settledRef = useRef(true);
   const onSettledRef = useRef(onSettled);
+  const poolRef = useRef(pool);
 
   const [strip, setStrip] = useState<Food[]>(() =>
     Array.from({ length: STRIP_LENGTH }, randomFood),
@@ -39,6 +46,7 @@ export default function Reel({ spinToken, target, onSettled }: ReelProps) {
   const [animating, setAnimating] = useState(false);
 
   onSettledRef.current = onSettled;
+  poolRef.current = pool;
 
   /** 读取实际的格子宽度和间距，避免把尺寸写死在 JS 里 */
   const measure = useCallback(() => {
@@ -76,7 +84,7 @@ export default function Reel({ spinToken, target, onSettled }: ReelProps) {
 
     settledRef.current = false;
     setAnimating(false);
-    setStrip(buildStrip(target));
+    setStrip(buildStrip(target, poolRef.current));
     setOffset(0);
 
     let inner = 0;
